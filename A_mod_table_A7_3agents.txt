@@ -1,0 +1,43 @@
+Number of models:																																																	
+4	4																																																
+Number of cores																																																	
+25																																																	
+Number of sessions																																																	
+1000																																																	
+Iterations per episode																																																	
+25000																																																	
+Maximum number of episode																																																	
+50000																																																	
+"Performance measurement period time (Y, Y <= 0 : at convergence after mandatory training of (-Y) years; X >= 1 : starts right after the completion of year X-1):"																																																	
+0																																																	
+Performance measurement period length: 																																																	
+4																																																	
+Number of Agents:																																																	
+3																																																	
+Number of Prices:																																																	
+16																																																	
+Type of Exploration Mechanism (1 = constant epsilon greedy; 2 = exponentially decreasing epsilon (beta); 3 = exponentially decreasing epsilon (m); 4 = Boltzmann)																																																	
+2																																																	
+Type of Payoff Input (2 = Logit demand)																																																	
+2																																																	
+Compute Q-Learning results (0 = No; 1 = Yes)																																																	
+1																																																	
+Compute results at convergence (prices and profits) (0 : No; 1 = Yes)																																																	
+1																																																	
+Compute Impulse Response analysis with a one-period deviation to static Best Response (0 = No; 1 = Yes)																																																	
+1																																																	
+Compute Impulse Response analysis with a temporary or permanent deviation to Nash with all agents (0 = No; 1000 = Permanent; 999 >= X >= 1 = Duration of temporary shock)																																																	
+1																																																	
+Compute Impulse Response analysis with a one-period deviation to all prices (0 = No; 1 = Yes)																																																	
+1																																																	
+"Compute Equilibrium Check (X1 = 0 : NO; X1 = 1 : Yes; X2 = % Slack on path; X3 = % Slack off path; if X2, X3 < 0 : Slack = 0)"																																																	
+1	0	0																																															
+Compute Q Gap w.r.t. Maximum (0 = NO; 1 = YES)																																																	
+0																																																	
+Compute Detailed Analysis (0 = No; 1 = Yes)																																																	
+0																																																	
+Model	PrintQ	Alpha1	Alpha2	Alpha3	Beta0_1	Beta0_2	Beta0_3	Beta1_1	Beta1_2	Beta1_3	Delta1	Delta2	Delta3	a0	a1	a2	a3	c1	c2	c3	mu	extend1	extend2	EntryProb	ExitProb	NashP1In	NashP2In	NashP3In	NashP1Out	NashP2Out	NashP3Out	CoopP1In	CoopP2In	CoopP3In	CoopP1Out	CoopP2Out	CoopP3Out	typeQ1	par1Q1	par2Q1	par3Q1	typeQ2	par1Q2	par2Q2	par3Q2	typeQ3	par1Q3	par2Q3	par3Q3
+1	0	0.15	0.15	0.15	1	1	1	0.1	0.1	0.1	0.95	0.95	0.95	0	2	2	2	1	1	1	0.25	0.1	0.1	0.1	0.1	1.37016	1.37016	1.37016	1.47293	1.47293	1000	2	2	2	1.92498	1.92498	1000	O	0	0	0	O	0	0	0	O	0	0	0
+2	0	0.15	0.15	0.15	1	1	1	0.1	0.1	0.1	0.95	0.95	0.95	0	2	2	2	1	1	1	0.25	0.1	0.1	0.01	0.01	1.37016	1.37016	1.37016	1.47293	1.47293	1000	2	2	2	1.92498	1.92498	1000	O	0	0	0	O	0	0	0	O	0	0	0
+3	0	0.15	0.15	0.15	1	1	1	0.1	0.1	0.1	0.95	0.95	0.95	0	2	2	2	1	1	1	0.25	0.1	0.1	0.001	0.001	1.37016	1.37016	1.37016	1.47293	1.47293	1000	2	2	2	1.92498	1.92498	1000	O	0	0	0	O	0	0	0	O	0	0	0
+4	0	0.15	0.15	0.15	1	1	1	0.1	0.1	0.1	0.95	0.95	0.95	0	2	2	2	1	1	1	0.25	0.1	0.1	0.0001	0.0001	1.37016	1.37016	1.37016	1.47293	1.47293	1000	2	2	2	1.92498	1.92498	1000	O	0	0	0	O	0	0	0	O	0	0	0
