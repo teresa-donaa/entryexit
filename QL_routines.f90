@@ -10,7 +10,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE initQMatrices ( iGame, EntryProb, idumQ, ivQ, iyQ, idum2Q, PI, delta, Q, maxValQ, maxLocQ )
+    SUBROUTINE initQMatrices ( iSession, EntryProb, idumQ, ivQ, iyQ, idum2Q, PI, delta, Q, maxValQ, maxLocQ )
     !
     ! Initializing Q matrices
     !
@@ -18,7 +18,7 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: iGame
+    INTEGER, INTENT(IN) :: iSession
     REAL(8), INTENT(IN) :: EntryProb
     INTEGER, INTENT(INOUT) :: idumQ, ivQ(32), iyQ, idum2Q
     REAL(8), DIMENSION(numActions,numAgents), INTENT(IN) :: PI
@@ -36,7 +36,7 @@ CONTAINS
     REAL(8) :: den, u
     CHARACTER(len = 225) :: QFileName
     CHARACTER(len = 5) :: iChar
-    CHARACTER(len = 5) :: codModelChar
+    CHARACTER(len = 5) :: codExperimentChar
     CHARACTER(len = 200) :: QFileFolderNameAgent
     !
     ! Beginning execution
@@ -108,24 +108,24 @@ CONTAINS
             ! on model "parQInitialization(iAgent,1)"
             !
             
-            WRITE(codModelChar,'(I0.<LengthFormatTotModelsPrint>)') NINT(parQInitialization(iAgent,1))
-            i = 1+INT(DBLE(numGames)*ran2(idumQ,ivQ,iyQ,idum2Q))
+            WRITE(codExperimentChar,'(I0.<LengthFormatTotExperimentsPrint>)') NINT(parQInitialization(iAgent,1))
+            i = 1+INT(DBLE(numSessions)*ran2(idumQ,ivQ,iyQ,idum2Q))
             WRITE(iChar,'(I0.5)') i
-            QFileName = 'Q_' // TRIM(codModelChar) // '_' // iChar // '.txt'
+            QFileName = 'Q_' // TRIM(codExperimentChar) // '_' // iChar // '.txt'
             QFileFolderNameAgent = QFileFolderName(iAgent)
             QFileName = TRIM(QFileFolderNameAgent) // TRIM(QFileName)
             !
             ! Read Q matrices from file
             !
-            OPEN(UNIT = iGame,FILE = QFileName,READONLY,RECL = 10000,IOSTAT = status)
-            IF (iAgent .GT. 1) READ(iGame,100)
+            OPEN(UNIT = iSession,FILE = QFileName,READONLY,RECL = 10000,IOSTAT = status)
+            IF (iAgent .GT. 1) READ(iSession,100)
 100         FORMAT(<(iAgent-1)*numStates-1>(/))
             DO iState = 1, numStates
                 !
-                READ(iGame,*) Q(iState,:,iAgent)
+                READ(iSession,*) Q(iState,:,iAgent)
                 !
             END DO
-            CLOSE(UNIT = iGame)
+            CLOSE(UNIT = iSession)
             !
         ELSE IF (typeQInitialization(iAgent) .EQ. 'R') THEN
             !
@@ -243,7 +243,7 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    REAL(8), INTENT(OUT) :: uIniPrice(numAgents,numGames)
+    REAL(8), INTENT(OUT) :: uIniPrice(numAgents,numSessions)
     INTEGER, INTENT(INOUT) :: idum
     INTEGER, INTENT(INOUT) :: iv(32)
     INTEGER, INTENT(INOUT) :: iy
@@ -251,17 +251,17 @@ CONTAINS
     !
     ! Declaring local variables
     !
-    INTEGER :: iGame, iAgent
+    INTEGER :: iSession, iAgent
     !
     ! Beginning execution
     !
     ! Generate U(0,1) draws for price initialization
     !
-    DO iGame = 1, numGames
+    DO iSession = 1, numSessions
         !
         DO iAgent = 1, numAgents
             !
-            uIniPrice(iAgent,iGame) = ran2(idum,iv,iy,idum2)
+            uIniPrice(iAgent,iSession) = ran2(idum,iv,iy,idum2)
             !
         END DO
         !
@@ -561,9 +561,9 @@ CONTAINS
 ! 
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE ReadInfoModel ( )
+    SUBROUTINE ReadInfoExperiment ( )
     !
-    ! Reads the InfoModel txt file
+    ! Reads the InfoExperiment txt file
     !
     ! INPUT:
     !
@@ -571,46 +571,46 @@ CONTAINS
     !
     ! OUTPUT (via global variables):
     !
-    ! - converged           : numGames array, = 1 if replication converged, = 0 otherwise
-    ! - timeToConvergence   : numGames array of number of iterations to convergence (/ItersPerYear)
-    ! - CycleLength         : numGames array of the length of the cycles at convergence
-    ! - CycleStates         : numPeriods x numGames array of states in the cycles at convergence
-    ! - CyclePrices         : numAgents x numPeriods x numGames array of prices in the cycles at convergence
-    ! - CycleProfits        : numAgents x numPeriods x numGames array of profits in the cycles at convergence
-    ! - indexStrategies     : lengthStrategies x numGames array of strategies at convergence 
+    ! - converged           : numSessions array, = 1 if replication converged, = 0 otherwise
+    ! - timeToConvergence   : numSessions array of number of iterations to convergence (/ItersPerEpisode)
+    ! - CycleLength         : numSessions array of the length of the cycles at convergence
+    ! - CycleStates         : numPeriods x numSessions array of states in the cycles at convergence
+    ! - CyclePrices         : numAgents x numPeriods x numSessions array of prices in the cycles at convergence
+    ! - CycleProfits        : numAgents x numPeriods x numSessions array of profits in the cycles at convergence
+    ! - indexStrategies     : lengthStrategies x numSessions array of strategies at convergence 
     !
     IMPLICIT NONE
     !
     ! Declaring local variables
     !
-    INTEGER :: iGame, rGame, iCycle, iState, iAgent
+    INTEGER :: iSession, rSession, iCycle, iState, iAgent
     !
     ! Beginning execution
     !
-    OPEN(UNIT = 998,FILE = FileNameInfoModel,STATUS = "OLD")    ! Open InfoModel file    
-    DO iGame = 1, numGames
+    OPEN(UNIT = 998,FILE = FileNameInfoExperiment,STATUS = "OLD")    ! Open InfoExperiment file    
+    DO iSession = 1, numSessions
         !
-        IF (MOD(iGame,100) .EQ. 0) PRINT*, 'Read ', iGame, ' strategies'
-        READ(998,*) rGame
-        READ(998,*) converged(iGame)
-        READ(998,*) timeToConvergence(iGame)
-        READ(998,*) CycleLength(iGame)
-        READ(998,*) CycleStates(:CycleLength(iGame),iGame)
-        READ(998,*) ((CyclePrices(iAgent,iCycle,iGame), iCycle = 1, CycleLength(iGame)), iAgent = 1, numAgents)
-        READ(998,*) ((CycleProfits(iAgent,iCycle,iGame), iCycle = 1, CycleLength(iGame)), iAgent = 1, numAgents)
+        IF (MOD(iSession,100) .EQ. 0) PRINT*, 'Read ', iSession, ' strategies'
+        READ(998,*) rSession
+        READ(998,*) converged(iSession)
+        READ(998,*) timeToConvergence(iSession)
+        READ(998,*) CycleLength(iSession)
+        READ(998,*) CycleStates(:CycleLength(iSession),iSession)
+        READ(998,*) ((CyclePrices(iAgent,iCycle,iSession), iCycle = 1, CycleLength(iSession)), iAgent = 1, numAgents)
+        READ(998,*) ((CycleProfits(iAgent,iCycle,iSession), iCycle = 1, CycleLength(iSession)), iAgent = 1, numAgents)
         DO iState = 1, numStates
             !
-            READ(998,*) (indexStrategies((iAgent-1)*numStates+iState,iGame), iAgent = 1, numAgents)
+            READ(998,*) (indexStrategies((iAgent-1)*numStates+iState,iSession), iAgent = 1, numAgents)
             !
         END DO
         !
     END DO
     CLOSE(UNIT = 998)                   ! Close indexStrategies txt file
-    PRINT*, 'Finished reading InfoModel'
+    PRINT*, 'Finished reading InfoExperiment'
     !
     ! Ending execution and returning control
     !
-END SUBROUTINE ReadInfoModel
+END SUBROUTINE ReadInfoExperiment
 ! 
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !

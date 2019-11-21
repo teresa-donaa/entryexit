@@ -13,7 +13,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE computeQGapToMax ( iModel )
+    SUBROUTINE computeQGapToMax ( iExperiment )
     !
     ! Computes statistics for one model
     !
@@ -21,21 +21,21 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: iModel
+    INTEGER, INTENT(IN) :: iExperiment
     !
     ! Declaring local variable
     !
     INTEGER, PARAMETER :: numThresPathCycleLength = 10
     INTEGER, PARAMETER :: ThresPathCycleLength(numThresPathCycleLength) = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 /)
-    INTEGER :: iGame, iState, iAgent, iThres, i, j, CycleLengthGame, CycleStatesGame(numPeriods), &
+    INTEGER :: iSession, iState, iAgent, iThres, i, j, CycleLengthSession, CycleStatesSession(numPeriods), &
         OptimalStrategy(numStates,numAgents), OptimalStrategyVec(lengthStrategies)
     INTEGER, DIMENSION(0:numThresPathCycleLength,0:numAgents) :: NumQGapTot, NumQGapOnPath, &
         NumQGapNotOnPath, NumQGapNotBRAllStates, NumQGapNotBRonPath, & 
         NumQGapNotEqAllStates, NumQGapNotEqonPath
     REAL(8), DIMENSION(0:numThresPathCycleLength,0:numAgents) :: SumQGapTot, SumQGapOnPath, &
         SumQGapNotOnPath, SumQGapNotBRAllStates, SumQGapNotBRonPath, SumQGapNotEqAllStates, SumQGapNotEqonPath
-    REAL(8), DIMENSION(0:numAgents) :: QGapTotGame,QGapOnPathGame,QGapNotOnPathGame,QGapNotBRAllStatesGame, &
-            QGapNotBRonPathGame,QGapNotEqAllStatesGame,QGapNotEqonPathGame
+    REAL(8), DIMENSION(0:numAgents) :: QGapTotSession,QGapOnPathSession,QGapNotOnPathSession,QGapNotBRAllStatesSession, &
+            QGapNotBRonPathSession,QGapNotEqAllStatesSession,QGapNotEqonPathSession
     !
     ! Beginning execution
     !
@@ -62,99 +62,99 @@ CONTAINS
     !
     ! Reading strategies and states at convergence from file
     !
-    CALL ReadInfoModel()
+    CALL ReadInfoExperiment()
     !
-    ! Beginning loop over games
+    ! Beginning loop over sessions
     !
     !$omp parallel do &
-    !$omp private(OptimalStrategyVec,CycleLengthGame,CycleStatesGame,OptimalStrategy, &
-    !$omp   QGapTotGame,QGapOnPathGame,QGapNotOnPathGame,QGapNotBRAllStatesGame, &
-    !$omp   QGapNotBRonPathGame,QGapNotEqAllStatesGame,QGapNotEqonPathGame,iThres) &
+    !$omp private(OptimalStrategyVec,CycleLengthSession,CycleStatesSession,OptimalStrategy, &
+    !$omp   QGapTotSession,QGapOnPathSession,QGapNotOnPathSession,QGapNotBRAllStatesSession, &
+    !$omp   QGapNotBRonPathSession,QGapNotEqAllStatesSession,QGapNotEqonPathSession,iThres) &
     !$omp reduction(+ : SumQGapTot,SumQGapOnPath,SumQGapNotOnPath,SumQGapNotBRAllStates,SumQGapNotBRonPath, &
     !$omp   SumQGapNotEqAllStates,SumQGapNotEqonPath,NumQGapTot,NumQGapOnPath,NumQGapNotOnPath, &
     !$omp   NumQGapNotBRAllStates,NumQGapNotBRonPath,NumQGapNotEqAllStates,NumQGapNotEqonPath)
     !
-    DO iGame = 1, numGames                  ! Start of loop aver games
+    DO iSession = 1, numSessions                  ! Start of loop aver sessions
         !
-        PRINT*, 'iGame = ', iGame
+        PRINT*, 'iSession = ', iSession
         !
         ! Read strategy and last observed state at convergence from file
         !
         !$omp critical
-        OptimalStrategyVec = indexStrategies(:,iGame)
-        CycleLengthGame = CycleLength(iGame)
-        CycleStatesGame(:CycleLengthGame) = CycleStates(:CycleLengthGame,iGame)
+        OptimalStrategyVec = indexStrategies(:,iSession)
+        CycleLengthSession = CycleLength(iSession)
+        CycleStatesSession(:CycleLengthSession) = CycleStates(:CycleLengthSession,iSession)
         !$omp end critical
         !
         OptimalStrategy = RESHAPE(OptimalStrategyVec, (/ numStates,numAgents /) )
         !
         ! Compute Q gap for the optimal strategy for all agents, in all states and actions
         !
-        CALL computeQGapToMaxGame(OptimalStrategy,CycleLengthGame,CycleStatesGame(:CycleLengthGame), &
-            QGapTotGame,QGapOnPathGame,QGapNotOnPathGame,QGapNotBRAllStatesGame, &
-            QGapNotBRonPathGame,QGapNotEqAllStatesGame,QGapNotEqonPathGame)
+        CALL computeQGapToMaxSession(OptimalStrategy,CycleLengthSession,CycleStatesSession(:CycleLengthSession), &
+            QGapTotSession,QGapOnPathSession,QGapNotOnPathSession,QGapNotBRAllStatesSession, &
+            QGapNotBRonPathSession,QGapNotEqAllStatesSession,QGapNotEqonPathSession)
         !
         ! Summing by agent and threshold
         !
-        iThres = MIN(CycleLength(iGame),ThresPathCycleLength(numThresPathCycleLength))
-        IF (NOT(ANY(QGapTotGame .LE. 0.d0))) THEN
+        iThres = MIN(CycleLength(iSession),ThresPathCycleLength(numThresPathCycleLength))
+        IF (NOT(ANY(QGapTotSession .LE. 0.d0))) THEN
             !
-            SumQGapTot(0,:) = SumQGapTot(0,:)+QGapTotGame
-            SumQGapTot(iThres,:) = SumQGapTot(iThres,:)+QGapTotGame
+            SumQGapTot(0,:) = SumQGapTot(0,:)+QGapTotSession
+            SumQGapTot(iThres,:) = SumQGapTot(iThres,:)+QGapTotSession
             NumQGapTot(0,:) = NumQGapTot(0,:)+1
             NumQGapTot(iThres,:) = NumQGapTot(iThres,:)+1
             !
         END IF
-        IF (NOT(ANY(QGapOnPathGame .LE. 0.d0))) THEN
+        IF (NOT(ANY(QGapOnPathSession .LE. 0.d0))) THEN
             !
-            SumQGapOnPath(0,:) = SumQGapOnPath(0,:)+QGapOnPathGame
-            SumQGapOnPath(iThres,:) = SumQGapOnPath(iThres,:)+QGapOnPathGame
+            SumQGapOnPath(0,:) = SumQGapOnPath(0,:)+QGapOnPathSession
+            SumQGapOnPath(iThres,:) = SumQGapOnPath(iThres,:)+QGapOnPathSession
             NumQGapOnPath(0,:) = NumQGapOnPath(0,:)+1
             NumQGapOnPath(iThres,:) = NumQGapOnPath(iThres,:)+1
             !
         END IF
-        IF (NOT(ANY(QGapNotOnPathGame .LE. 0.d0))) THEN
+        IF (NOT(ANY(QGapNotOnPathSession .LE. 0.d0))) THEN
             !
-            SumQGapNotOnPath(0,:) = SumQGapNotOnPath(0,:)+QGapNotOnPathGame
-            SumQGapNotOnPath(iThres,:) = SumQGapNotOnPath(iThres,:)+QGapNotOnPathGame
+            SumQGapNotOnPath(0,:) = SumQGapNotOnPath(0,:)+QGapNotOnPathSession
+            SumQGapNotOnPath(iThres,:) = SumQGapNotOnPath(iThres,:)+QGapNotOnPathSession
             NumQGapNotOnPath(0,:) = NumQGapNotOnPath(0,:)+1
             NumQGapNotOnPath(iThres,:) = NumQGapNotOnPath(iThres,:)+1
             !
         END IF
-        IF (NOT(ANY(QGapNotBRAllStatesGame .LE. 0.d0))) THEN
+        IF (NOT(ANY(QGapNotBRAllStatesSession .LE. 0.d0))) THEN
             !
-            SumQGapNotBRAllStates(0,:) = SumQGapNotBRAllStates(0,:)+QGapNotBRAllStatesGame
-            SumQGapNotBRAllStates(iThres,:) = SumQGapNotBRAllStates(iThres,:)+QGapNotBRAllStatesGame
+            SumQGapNotBRAllStates(0,:) = SumQGapNotBRAllStates(0,:)+QGapNotBRAllStatesSession
+            SumQGapNotBRAllStates(iThres,:) = SumQGapNotBRAllStates(iThres,:)+QGapNotBRAllStatesSession
             NumQGapNotBRAllStates(0,:) = NumQGapNotBRAllStates(0,:)+1
             NumQGapNotBRAllStates(iThres,:) = NumQGapNotBRAllStates(iThres,:)+1
             !
         END IF
-        IF (NOT(ANY(QGapNotBRonPathGame .LE. 0.d0))) THEN
+        IF (NOT(ANY(QGapNotBRonPathSession .LE. 0.d0))) THEN
             !
-            SumQGapNotBRonPath(0,:) = SumQGapNotBRonPath(0,:)+QGapNotBRonPathGame
-            SumQGapNotBRonPath(iThres,:) = SumQGapNotBRonPath(iThres,:)+QGapNotBRonPathGame
+            SumQGapNotBRonPath(0,:) = SumQGapNotBRonPath(0,:)+QGapNotBRonPathSession
+            SumQGapNotBRonPath(iThres,:) = SumQGapNotBRonPath(iThres,:)+QGapNotBRonPathSession
             NumQGapNotBRonPath(0,:) = NumQGapNotBRonPath(0,:)+1
             NumQGapNotBRonPath(iThres,:) = NumQGapNotBRonPath(iThres,:)+1
             !
         END IF
-        IF (NOT(ANY(QGapNotEqAllStatesGame .LE. 0.d0))) THEN
+        IF (NOT(ANY(QGapNotEqAllStatesSession .LE. 0.d0))) THEN
             !
-            SumQGapNotEqAllStates(0,:) = SumQGapNotEqAllStates(0,:)+QGapNotEqAllStatesGame
-            SumQGapNotEqAllStates(iThres,:) = SumQGapNotEqAllStates(iThres,:)+QGapNotEqAllStatesGame
+            SumQGapNotEqAllStates(0,:) = SumQGapNotEqAllStates(0,:)+QGapNotEqAllStatesSession
+            SumQGapNotEqAllStates(iThres,:) = SumQGapNotEqAllStates(iThres,:)+QGapNotEqAllStatesSession
             NumQGapNotEqAllStates(0,:) = NumQGapNotEqAllStates(0,:)+1
             NumQGapNotEqAllStates(iThres,:) = NumQGapNotEqAllStates(iThres,:)+1
             !
         END IF
-        IF (NOT(ANY(QGapNotEqonPathGame .LE. 0.d0))) THEN
+        IF (NOT(ANY(QGapNotEqonPathSession .LE. 0.d0))) THEN
             !
-            SumQGapNotEqonPath(0,:) = SumQGapNotEqonPath(0,:)+QGapNotEqonPathGame
-            SumQGapNotEqonPath(iThres,:) = SumQGapNotEqonPath(iThres,:)+QGapNotEqonPathGame
+            SumQGapNotEqonPath(0,:) = SumQGapNotEqonPath(0,:)+QGapNotEqonPathSession
+            SumQGapNotEqonPath(iThres,:) = SumQGapNotEqonPath(iThres,:)+QGapNotEqonPathSession
             NumQGapNotEqonPath(0,:) = NumQGapNotEqonPath(0,:)+1
             NumQGapNotEqonPath(iThres,:) = NumQGapNotEqonPath(iThres,:)+1
             !
         END IF
         !
-    END DO                                  ! End of loop over games
+    END DO                                  ! End of loop over sessions
     !$omp end parallel do
     !
     ! Averaging
@@ -178,7 +178,7 @@ CONTAINS
     ! Printing averages and descriptive statistics
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     !
-    IF (iModel .EQ. 1) THEN
+    IF (iExperiment .EQ. 1) THEN
         !
         WRITE(10006,1) &
             (i, i = 1, numAgents), &
@@ -195,7 +195,7 @@ CONTAINS
             (i, i, i, i, i, i, i, i = 1, numAgents), &
             (j, j, j, j, j, j, j, &
                 (j, i, j, i, j, i, j, i, j, i, j, i, j, i, i = 1, numAgents), j = 1, numThresPathCycleLength)
-1       FORMAT('Model ', &
+1       FORMAT('Experiment ', &
             <numAgents>('    alpha', I1, ' '), &
             <numExplorationParameters>('     beta', I1, ' '), <numAgents>('    delta', I1, ' '), &
             <numAgents>('typeQini', I1, ' ', <numAgents>('par', I1, 'Qini', I1, ' ')), &
@@ -219,7 +219,7 @@ CONTAINS
         !
     END IF
     !
-    WRITE(10006,2) codModel, &
+    WRITE(10006,2) codExperiment, &
         alpha, MExpl, delta, &
         (typeQInitialization(i), parQInitialization(i, :), i = 1, numAgents), &
         DemandParameters, &
@@ -253,7 +253,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE computeQGapToMaxGame ( OptimalStrategy, CycleLength, CycleStates, &
+    SUBROUTINE computeQGapToMaxSession ( OptimalStrategy, CycleLength, CycleStates, &
         QGapTot, QGapOnPath, QGapNotOnPath, QGapNotBRAllStates, &
         QGapNotBRonPath, QGapNotEqAllStates, QGapNotEqonPath )
     !
@@ -401,7 +401,7 @@ CONTAINS
     !
     ! Ending execution and returning control
     !
-    END SUBROUTINE computeQGapToMaxGame
+    END SUBROUTINE computeQGapToMaxSession
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !

@@ -11,7 +11,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE ComputeConvResults ( iModel )
+    SUBROUTINE ComputeConvResults ( iExperiment )
     !
     ! Computes statistics for one model
     !
@@ -19,25 +19,25 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: iModel
+    INTEGER, INTENT(IN) :: iExperiment
     !
     ! Declaring local variable
     !
-    INTEGER :: i, j, iGame, rGame, iPeriod, iState, iAgent, CycleLength, iInOut
+    INTEGER :: i, j, iSession, rSession, iPeriod, iState, iAgent, CycleLength, iInOut
     INTEGER :: p(numAgents), pPrime(numAgents)
     INTEGER :: OptimalStrategyVec(lengthStrategies), LastStateVec(LengthStates)
     INTEGER :: VisitedStates(numPeriods), OptimalStrategy(numStates,numAgents), &
         LastObservedPrices(numAgents), ItersInOut(numStates)
     INTEGER :: pHist(numPeriods,numAgents)
-    INTEGER, DIMENSION(numGames,2) :: CountItersInOut
+    INTEGER, DIMENSION(numSessions,2) :: CountItersInOut
     INTEGER, DIMENSION(2) :: TotCountItersInOut
-    REAL(8) :: Profits(numGames,numAgents,2), VisitedProfits(numPeriods,numAgents), &
-        AvgProfitsIn(numGames), AvgProfitsOut(numGames)
+    REAL(8) :: Profits(numSessions,numAgents,2), VisitedProfits(numPeriods,numAgents), &
+        AvgProfitsIn(numSessions), AvgProfitsOut(numSessions)
     REAL(8), DIMENSION(numAgents,2) :: meanProfit, seProfit, meanProfitGain, seProfitGain
     REAL(8), DIMENSION(2) :: meanAvgProfit, seAvgProfit, meanAvgProfitGain, seAvgProfitGain
-    REAL(8) :: FreqStates(numGames,numStates), meanFreqStates(numStates)
+    REAL(8) :: FreqStates(numSessions,numStates), meanFreqStates(numStates)
     REAL(8) :: den
-    LOGICAL, DIMENSION(numGames,2) :: MaskCountItersInOut
+    LOGICAL, DIMENSION(numSessions,2) :: MaskCountItersInOut
     !
     ! Beginning execution
     !
@@ -50,34 +50,34 @@ CONTAINS
     !
     ! Reading strategies and states at convergence from file
     !
-    OPEN(UNIT = 998,FILE = FileNameInfoModel,STATUS = "OLD")
-    DO iGame = 1, numGames
+    OPEN(UNIT = 998,FILE = FileNameInfoExperiment,STATUS = "OLD")
+    DO iSession = 1, numSessions
         !
-        IF (MOD(iGame,100) .EQ. 0) PRINT*, 'Read ', iGame, ' strategies'
-        READ(998,*) rGame
-        READ(998,*) converged(rGame)
-        READ(998,*) timeToConvergence(rGame)
-        READ(998,*) indexLastState(:,rGame)
+        IF (MOD(iSession,100) .EQ. 0) PRINT*, 'Read ', iSession, ' strategies'
+        READ(998,*) rSession
+        READ(998,*) converged(rSession)
+        READ(998,*) timeToConvergence(rSession)
+        READ(998,*) indexLastState(:,rSession)
         DO iState = 1, numStates
             !
-            READ(998,*) (indexStrategies((iAgent-1)*numStates+iState,rGame), iAgent = 1, numAgents)
+            READ(998,*) (indexStrategies((iAgent-1)*numStates+iState,rSession), iAgent = 1, numAgents)
             !
         END DO
         !
     END DO
-    CLOSE(UNIT = 998)                   ! Close InfoModel file
+    CLOSE(UNIT = 998)                   ! Close InfoExperiment file
     !
-    OPEN(UNIT = 999,FILE = FileNameInfoModel,STATUS = "REPLACE")        ! Open InfoModel file
+    OPEN(UNIT = 999,FILE = FileNameInfoExperiment,STATUS = "REPLACE")        ! Open InfoExperiment file
     !
-    ! Beginning loop over games
+    ! Beginning loop over sessions
     !
     CountItersInOut = 0
-    DO iGame = 1, numGames        ! Start of loop aver games
+    DO iSession = 1, numSessions        ! Start of loop aver sessions
         !
-        PRINT*, 'iGame = ', iGame
+        PRINT*, 'iSession = ', iSession
         !
-        OptimalStrategyVec = indexStrategies(:,iGame)
-        LastStateVec = indexLastState(:,iGame)
+        OptimalStrategyVec = indexStrategies(:,iSession)
+        LastStateVec = indexLastState(:,iSession)
         !
         OptimalStrategy = RESHAPE(OptimalStrategyVec, (/ numStates,numAgents /))
         LastObservedPrices = LastStateVec
@@ -123,25 +123,25 @@ CONTAINS
         END DO
         !
         CycleLength = iPeriod-MINVAL(MINLOC((VisitedStates(:iPeriod-1)-VisitedStates(iPeriod))**2))
-        CountItersInOut(iGame,1) = COUNT(ItersInOut(iPeriod-CycleLength+1:iPeriod) .EQ. 1)
-        CountItersInOut(iGame,2) = COUNT(ItersInOut(iPeriod-CycleLength+1:iPeriod) .EQ. 2)
+        CountItersInOut(iSession,1) = COUNT(ItersInOut(iPeriod-CycleLength+1:iPeriod) .EQ. 1)
+        CountItersInOut(iSession,2) = COUNT(ItersInOut(iPeriod-CycleLength+1:iPeriod) .EQ. 2)
         DO iAgent = 1, numAgents
             !
             DO iInOut = 1, 2
                 !
-                IF (CountItersInOut(iGame,iInOut) .NE. 0) THEN
+                IF (CountItersInOut(iSession,iInOut) .NE. 0) THEN
                     !
-                    Profits(iGame,iAgent,iInOut) = &
+                    Profits(iSession,iAgent,iInOut) = &
                         SUM(visitedProfits(iPeriod-CycleLength+1:iPeriod,iAgent), &
                             MASK = ItersInOut(iPeriod-CycleLength+1:iPeriod) .EQ. iInOut)/ &
-                                DBLE(CountItersInOut(iGame,iInOut))
+                                DBLE(CountItersInOut(iSession,iInOut))
                     !
                 END IF
                 !
             END DO
             !
         END DO
-        FreqStates(iGame,VisitedStates(iPeriod-CycleLength+1:iPeriod)) = 1.d0/DBLE(CycleLength)
+        FreqStates(iSession,VisitedStates(iPeriod-CycleLength+1:iPeriod)) = 1.d0/DBLE(CycleLength)
         !
         ! Computing and writing price cycles
         !
@@ -152,11 +152,11 @@ CONTAINS
         VisitedProfits(:CycleLength,:) = VisitedProfits(iPeriod-CycleLength+1:iPeriod,:)
         VisitedProfits(CycleLength+1:,:) = 0.d0
         !
-        ! Write game info to InfoModel file
+        ! Write session info to InfoExperiment file
         !
-        WRITE(999,9961) iGame, &
-            converged(iGame), &
-            timeToConvergence(iGame), &
+        WRITE(999,9961) iSession, &
+            converged(iSession), &
+            timeToConvergence(iSession), &
             CycleLength, &
             VisitedStates(:CycleLength), &
             (pHist(:CycleLength,iAgent), iAgent = 1, numAgents), &
@@ -171,9 +171,9 @@ CONTAINS
             <numAgents>(<CycleLength>(1X, F8.5)), /, &
             <numStates>(<numAgents>(1X, I<lengthFormatActionPrint>), /))
         !
-    END DO        ! End of loop over games
+    END DO        ! End of loop over sessions
     !
-    CLOSE(UNIT = 999)                   ! Close InfoModel file
+    CLOSE(UNIT = 999)                   ! Close InfoExperiment file
     !
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Computing averages and descriptive statistics
@@ -234,7 +234,7 @@ CONTAINS
     !
     DO i = 1, numStates
         !
-        meanFreqStates(i) = SUM(freqStates(:,i))/DBLE(numGames)
+        meanFreqStates(i) = SUM(freqStates(:,i))/DBLE(numSessions)
         !
     END DO
     !
@@ -242,7 +242,7 @@ CONTAINS
     ! Printing averages and descriptive statistics
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     !
-    IF (iModel .EQ. 1) THEN
+    IF (iExperiment .EQ. 1) THEN
         !
         WRITE(100022,1) &
             (i, i = 1, numAgents), &
@@ -259,7 +259,7 @@ CONTAINS
             (i, i, i = 1, numAgents), (i, i, i = 1, numAgents), &
             (i, i, i = 1, numAgents), (i, i, i = 1, numAgents), &
             (labelStates(j), j = 1, numStates)
-1       FORMAT('Model ', &
+1       FORMAT('Experiment ', &
             <numAgents>('    alpha', I1, ' '), &
             <numExplorationParameters>('     beta', I1, ' '), <numAgents>('    delta', I1, ' '), &
             <numAgents>('typeQini', I1, ' ', <numAgents>('par', I1, 'Qini', I1, ' ')), &
@@ -280,7 +280,7 @@ CONTAINS
         !
     END IF
     !
-    WRITE(100022,2) codModel, &
+    WRITE(100022,2) codExperiment, &
         alpha, MExpl, delta, &
         (typeQInitialization(i), parQInitialization(i, :), i = 1, numAgents), &
         DemandParameters, &

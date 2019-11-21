@@ -12,7 +12,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE computeEqCheck ( iModel )
+    SUBROUTINE computeEqCheck ( iExperiment )
     !
     ! Computes statistics for one model
     !
@@ -20,31 +20,31 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: iModel
+    INTEGER, INTENT(IN) :: iExperiment
     !
     ! Declaring local variable
     !
-    INTEGER :: iGame, iAgent, iThres, i, j, iState, &
+    INTEGER :: iSession, iAgent, iThres, i, j, iState, &
         OptimalStrategyVec(lengthStrategies), OptimalStrategy(numStates,numAgents), &
-        CycleStatesGame(numPeriods), &
-        CycleLengthGame, numCycleLength(0:numThresCycleLength), &
+        CycleStatesSession(numPeriods), &
+        CycleLengthSession, numCycleLength(0:numThresCycleLength), &
         ThresCycleLength(numThresCycleLength)
-    INTEGER, DIMENSION(numAgents) :: flagBRAllGame, flagBROnPathGame, flagBROffPathGame
-    INTEGER :: flagEQAllGame, flagEQOnPathGame, flagEQOffPathGame
-    INTEGER, DIMENSION(numAgents,numGames) :: flagBRAll, flagBROnPath, flagBROffPath
-    INTEGER, DIMENSION(numGames) :: flagEQAll, flagEQOnPath, flagEQOffPath
+    INTEGER, DIMENSION(numAgents) :: flagBRAllSession, flagBROnPathSession, flagBROffPathSession
+    INTEGER :: flagEQAllSession, flagEQOnPathSession, flagEQOffPathSession
+    INTEGER, DIMENSION(numAgents,numSessions) :: flagBRAll, flagBROnPath, flagBROffPath
+    INTEGER, DIMENSION(numSessions) :: flagEQAll, flagEQOnPath, flagEQOffPath
     !
     REAL(8) :: r_num
-    REAL(8), DIMENSION(numAgents) :: freqBRAllGame, freqBROnPathGame, freqBROffPathGame
-    REAL(8) :: freqEQAllGame, freqEQOnPathGame, freqEQOffPathGame
-    REAL(8), DIMENSION(numAgents,numGames) :: freqBRAll, freqBROnPath, freqBROffPath
-    REAL(8), DIMENSION(numGames) :: freqEQAll, freqEQOnPath, freqEQOffPath
+    REAL(8), DIMENSION(numAgents) :: freqBRAllSession, freqBROnPathSession, freqBROffPathSession
+    REAL(8) :: freqEQAllSession, freqEQOnPathSession, freqEQOffPathSession
+    REAL(8), DIMENSION(numAgents,numSessions) :: freqBRAll, freqBROnPath, freqBROffPath
+    REAL(8), DIMENSION(numSessions) :: freqEQAll, freqEQOnPath, freqEQOffPath
     REAL(8), DIMENSION(0:numAgents,0:numThresCycleLength) :: AvgFreqBRAll, AvgFreqBROnPath, AvgFreqBROffPath
     REAL(8), DIMENSION(0:numThresCycleLength) :: AvgFreqEQAll, AvgFreqEQOnPath, AvgFreqEQOffPath
     REAL(8), DIMENSION(0:numAgents,0:numThresCycleLength) :: AvgFlagBRAll, AvgFlagBROnPath, AvgFlagBROffPath
     REAL(8), DIMENSION(0:numThresCycleLength) :: AvgFlagEQAll, AvgFlagEQOnPath, AvgFlagEQOffPath
     !
-    LOGICAL :: cond(numGames), matcond(numAgents,numGames)
+    LOGICAL :: cond(numSessions), matcond(numAgents,numSessions)
     !
     ! Beginning execution
     !
@@ -57,46 +57,46 @@ CONTAINS
     !
     ! Reading strategies and states at convergence from file
     !
-    CALL ReadInfoModel()
+    CALL ReadInfoExperiment()
     !
-    ! Beginning loop over games
+    ! Beginning loop over sessions
     !
     !$omp parallel do &
-    !$omp private(OptimalStrategy,OptimalStrategyVec,CycleLengthGame,CycleStatesGame, &
-    !$omp   freqBRAllGame,freqBROnPathGame,freqBROffPathGame,freqEQAllGame,freqEQOnPathGame,freqEQOffPathGame, &
-    !$omp   flagBRAllGame,flagBROnPathGame,flagBROffPathGame,flagEQAllGame,flagEQOnPathGame,flagEQOffPathGame)
-    DO iGame = 1, numGames                  ! Start of loop aver games
+    !$omp private(OptimalStrategy,OptimalStrategyVec,CycleLengthSession,CycleStatesSession, &
+    !$omp   freqBRAllSession,freqBROnPathSession,freqBROffPathSession,freqEQAllSession,freqEQOnPathSession,freqEQOffPathSession, &
+    !$omp   flagBRAllSession,flagBROnPathSession,flagBROffPathSession,flagEQAllSession,flagEQOnPathSession,flagEQOffPathSession)
+    DO iSession = 1, numSessions                  ! Start of loop aver sessions
         !
-        PRINT*, 'iGame = ', iGame
+        PRINT*, 'iSession = ', iSession
         !
         !$omp critical
-        OptimalStrategyVec = indexStrategies(:,iGame)
-        CycleLengthGame = CycleLength(iGame)
-        CycleStatesGame(:CycleLengthGame) = CycleStates(:CycleLengthGame,iGame)
+        OptimalStrategyVec = indexStrategies(:,iSession)
+        CycleLengthSession = CycleLength(iSession)
+        CycleStatesSession(:CycleLengthSession) = CycleStates(:CycleLengthSession,iSession)
         !$omp end critical
         !
         OptimalStrategy = RESHAPE(OptimalStrategyVec, (/ numStates,numAgents /) )
         !
-        CALL computeEqCheckGame(OptimalStrategy,CycleLengthGame,CycleStatesGame(:CycleLengthGame),SlackOnPath,SlackOffPath, &
-            freqBRAllGame,freqBROnPathGame,freqBROffPathGame,freqEQAllGame,freqEQOnPathGame,freqEQOffPathGame, &
-            flagBRAllGame,flagBROnPathGame,flagBROffPathGame,flagEQAllGame,flagEQOnPathGame,flagEQOffPathGame)
+        CALL computeEqCheckSession(OptimalStrategy,CycleLengthSession,CycleStatesSession(:CycleLengthSession),SlackOnPath,SlackOffPath, &
+            freqBRAllSession,freqBROnPathSession,freqBROffPathSession,freqEQAllSession,freqEQOnPathSession,freqEQOffPathSession, &
+            flagBRAllSession,flagBROnPathSession,flagBROffPathSession,flagEQAllSession,flagEQOnPathSession,flagEQOffPathSession)
         !
         !$omp critical
-        freqBRAll(:,iGame) = freqBRAllGame
-        freqBROnPath(:,iGame) = freqBROnPathGame
-        freqBROffPath(:,iGame) = freqBROffPathGame
-        freqEQAll(iGame) = freqEQAllGame
-        freqEQOnPath(iGame) = freqEQOnPathGame
-        freqEQOffPath(iGame) = freqEQOffPathGame
-        flagBRAll(:,iGame) = flagBRAllGame
-        flagBROnPath(:,iGame) = flagBROnPathGame
-        flagBROffPath(:,iGame) = flagBROffPathGame
-        flagEQAll(iGame) = flagEQAllGame
-        flagEQOnPath(iGame) = flagEQOnPathGame
-        flagEQOffPath(iGame) = flagEQOffPathGame
+        freqBRAll(:,iSession) = freqBRAllSession
+        freqBROnPath(:,iSession) = freqBROnPathSession
+        freqBROffPath(:,iSession) = freqBROffPathSession
+        freqEQAll(iSession) = freqEQAllSession
+        freqEQOnPath(iSession) = freqEQOnPathSession
+        freqEQOffPath(iSession) = freqEQOffPathSession
+        flagBRAll(:,iSession) = flagBRAllSession
+        flagBROnPath(:,iSession) = flagBROnPathSession
+        flagBROffPath(:,iSession) = flagBROffPathSession
+        flagEQAll(iSession) = flagEQAllSession
+        flagEQOnPath(iSession) = flagEQOnPathSession
+        flagEQOffPath(iSession) = flagEQOffPathSession
         !$omp end critical
         !
-    END DO                                  ! End of loop over games
+    END DO                                  ! End of loop over sessions
     !$omp end parallel do
     !
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -118,7 +118,7 @@ CONTAINS
     !
     ! Total averages
     !
-    numCycleLength(0) = numGames
+    numCycleLength(0) = numSessions
     !
     r_num = DBLE(numAgents*numCycleLength(0))
     AvgFreqBRAll(0,0) = SUM(freqBRAll)/r_num
@@ -238,7 +238,7 @@ CONTAINS
     ! Printing averages 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     !
-    IF (iModel .EQ. 1) THEN
+    IF (iExperiment .EQ. 1) THEN
         !
         WRITE(10004,1) &
             (i, i = 1, numAgents), &
@@ -256,7 +256,7 @@ CONTAINS
             ((iThres, i = 1, 12), iThres = 0, numThresCycleLength), &
             (((iAgent, iThres, i = 1, 6), iThres = 0, numThresCycleLength), &
                     iAgent = 1, numAgents)
-1       FORMAT('Model ', &
+1       FORMAT('Experiment ', &
             <numAgents>('    alpha', I1, ' '), &
             <numExplorationParameters>('     beta', I1, ' '), <numAgents>('    delta', I1, ' '), &
             <numAgents>('typeQini', I1, ' ', <numAgents>('par', I1, 'Qini', I1, ' ')), &
@@ -292,7 +292,7 @@ CONTAINS
         !
     END IF
     !
-    WRITE(10004,2) codModel, &
+    WRITE(10004,2) codExperiment, &
         alpha, MExpl, delta, &
         (typeQInitialization(i), parQInitialization(i, :), i = 1, numAgents), &
         DemandParameters, &
@@ -327,7 +327,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE computeEqCheckGame ( OptimalStrategy, CycleLengthGame, CycleStatesGame, SlackOnPath, SlackOffPath, &
+    SUBROUTINE computeEqCheckSession ( OptimalStrategy, CycleLengthSession, CycleStatesSession, SlackOnPath, SlackOffPath, &
         freqBRAll, freqBROnPath, freqBROffPath, freqEQAll, freqEQOnPath, freqEQOffPath, &
         flagBRAll, flagBROnPath, flagBROffPath, flagEQAll, flagEQOnPath, flagEQOffPath )
     !
@@ -336,8 +336,8 @@ CONTAINS
     ! INPUT:
     !
     ! - OptimalStrategy     : strategy for all agents
-    ! - CycleLengthGame     : length of the replication's path (i.e., state cycle)
-    ! - CycleStatesGame     : replication's path (i.e., state cycle)
+    ! - CycleLengthSession     : length of the replication's path (i.e., state cycle)
+    ! - CycleStatesSession     : replication's path (i.e., state cycle)
     ! - SlackOnPath         : slack allowed in Q cells in on-path states
     ! - SlackOffPath        : slack allowed in Q cells in off-path states
     !
@@ -360,7 +360,7 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: OptimalStrategy(numStates,numAgents), CycleLengthGame, CycleStatesGame(CycleLengthGame)
+    INTEGER, INTENT(IN) :: OptimalStrategy(numStates,numAgents), CycleLengthSession, CycleStatesSession(CycleLengthSession)
     REAL(8), INTENT(IN) :: SlackOnPath, SlackOffPath
     REAL(8), DIMENSION(numAgents), INTENT(OUT) :: freqBRAll, freqBROnPath, freqBROffPath
     REAL(8), INTENT(OUT) :: freqEQAll, freqEQOnPath, freqEQOffPath
@@ -402,13 +402,13 @@ CONTAINS
             DO iPrice = 1, numPrices            ! Start of loop over prices to find optimal price(s)
                 !
                 TestDiff = ABS(StateValueFunction(iPrice)-MaxStateValueFunction)
-                IF (ANY(CycleStatesGame .EQ. iState)) THEN
+                IF (ANY(CycleStatesSession .EQ. iState)) THEN
                     !
                     IF (SlackOnPath .LT. 0.d0) TestCrit = ABS(EPSILON(MaxStateValueFunction))
                     IF (SlackOnPath .GT. 0.d0) TestCrit = ABS(SlackOnPath*MaxStateValueFunction)
                     !
                 END IF
-                IF (ALL(CycleStatesGame .NE. iState)) THEN
+                IF (ALL(CycleStatesSession .NE. iState)) THEN
                     !
                     IF (SlackOffPath .LT. 0.d0) TestCrit = ABS(EPSILON(MaxStateValueFunction))
                     IF (SlackOffPath .GT. 0.d0) TestCrit = ABS(SlackOffPath*MaxStateValueFunction)
@@ -445,11 +445,11 @@ CONTAINS
     DO iAgent = 1, numAgents
         !
         numStatesBRAll(iAgent) = SUM(IsBestReply(:,iAgent))
-        numStatesBROnPath(iAgent) = SUM(IsBestReply(CycleStatesGame,iAgent))
+        numStatesBROnPath(iAgent) = SUM(IsBestReply(CycleStatesSession,iAgent))
         numStatesBROffPath(iAgent) = numStatesBRAll(iAgent)-numStatesBROnPath(iAgent)
         IF (numStatesBRAll(iAgent) .EQ. numStates) flagBRAll(iAgent) = 1
-        IF (numStatesBROnPath(iAgent) .EQ. CycleLengthGame) flagBROnPath(iAgent) = 1
-        IF (numStatesBROffPath(iAgent) .EQ. (numStates-CycleLengthGame)) flagBROffPath(iAgent) = 1
+        IF (numStatesBROnPath(iAgent) .EQ. CycleLengthSession) flagBROnPath(iAgent) = 1
+        IF (numStatesBROffPath(iAgent) .EQ. (numStates-CycleLengthSession)) flagBROffPath(iAgent) = 1
         !
     END DO
     !
@@ -470,7 +470,7 @@ CONTAINS
             !
             numStatesEQAll = numStatesEQAll+1
             !
-            IF (ANY(CycleStatesGame .EQ. iState)) THEN
+            IF (ANY(CycleStatesSession .EQ. iState)) THEN
                 !
                 numStatesEQOnPath = numStatesEQOnPath+1
                 !
@@ -487,21 +487,21 @@ CONTAINS
     flagEQOnPath = 0
     flagEQOffPath = 0
     IF (numStatesEQAll .EQ. numStates) flagEQAll = 1
-    IF (numStatesEQOnPath .EQ. CycleLengthGame) flagEQOnPath = 1
-    IF (numStatesEQOffPath .EQ. (numStates-CycleLengthGame)) flagEQOffPath = 1
+    IF (numStatesEQOnPath .EQ. CycleLengthSession) flagEQOnPath = 1
+    IF (numStatesEQOffPath .EQ. (numStates-CycleLengthSession)) flagEQOffPath = 1
     !
     ! 4. Convert number of states into frequencies
     !
     freqBRAll = DBLE(numStatesBRAll)/DBLE(numStates)
-    freqBROnPath = DBLE(numStatesBROnPath)/DBLE(CycleLengthGame)
-    freqBROffPath = DBLE(numStatesBROffPath)/DBLE(numStates-CycleLengthGame)
+    freqBROnPath = DBLE(numStatesBROnPath)/DBLE(CycleLengthSession)
+    freqBROffPath = DBLE(numStatesBROffPath)/DBLE(numStates-CycleLengthSession)
     freqEQAll = DBLE(numStatesEQAll)/DBLE(numStates)
-    freqEQOnPath = DBLE(numStatesEQOnPath)/DBLE(CycleLengthGame)
-    freqEQOffPath = DBLE(numStatesEQOffPath)/DBLE(numStates-CycleLengthGame)
+    freqEQOnPath = DBLE(numStatesEQOnPath)/DBLE(CycleLengthSession)
+    freqEQOffPath = DBLE(numStatesEQOffPath)/DBLE(numStates-CycleLengthSession)
     !
     ! Ending execution and returning control
     !
-    END SUBROUTINE computeEqCheckGame
+    END SUBROUTINE computeEqCheckSession
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !

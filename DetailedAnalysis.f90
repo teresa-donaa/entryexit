@@ -13,7 +13,7 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE ComputeDetailedAnalysis ( iModel )
+    SUBROUTINE ComputeDetailedAnalysis ( iExperiment )
     !
     ! Computes statistics for one model
     !
@@ -21,7 +21,7 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: iModel
+    INTEGER, INTENT(IN) :: iExperiment
     !
     ! Declaring local variable
     !
@@ -30,7 +30,7 @@ CONTAINS
         VisitedStatesPre(numPeriods), VisitedStates(MAX(numShockPeriodsPrint,numPeriods)), &
         VisitedStatesTMP(numPeriods), SameCyclePrePost, &
         p(numAgents), pPrime(numAgents), &
-        iState, iStatePre, iGame, iAgent, jAgent, iPrice, iPeriod, jPeriod, iPeriodState, &
+        iState, iStatePre, iSession, iAgent, jAgent, iPrice, iPeriod, jPeriod, iPeriodState, &
         indexShockState(LengthStates), i, j, PreCycleLength, QCellCycleLength, IndexDynamicBR(numAgents)
 	INTEGER :: OptimalStrategyVec(lengthStrategies), OptimalStrategy(numStates,numAgents)
     INTEGER, DIMENSION(numPeriods,numAgents) :: IndPrePrices
@@ -46,8 +46,8 @@ CONTAINS
     REAL(8), DIMENSION(numAgents) :: AvgPrePrices, AvgPreProfits, AvgPostPrices, AvgPostProfits
     REAL(8), DIMENSION(numAgents) :: freqBRAll, freqBROnPath, freqBROffPath
     REAL(8) :: freqEQAll, freqEQOnPath, freqEQOffPath
-    REAL(8), DIMENSION(0:numAgents) :: QGapTotGame,QGapOnPathGame,QGapNotOnPathGame,QGapNotBRAllStatesGame, &
-            QGapNotBRonPathGame,QGapNotEqAllStatesGame,QGapNotEqonPathGame
+    REAL(8), DIMENSION(0:numAgents) :: QGapTotSession,QGapOnPathSession,QGapNotOnPathSession,QGapNotBRAllStatesSession, &
+            QGapNotBRonPathSession,QGapNotEqAllStatesSession,QGapNotEqonPathSession
     !
     LOGICAL :: FlagReturnedToState
     !
@@ -60,12 +60,12 @@ CONTAINS
     !
     ! Opening output file
     !
-    FileName = TRIM(TRIM("A_det_" // ModelName) // "_") // ModelNumber
+    FileName = TRIM(TRIM("A_det_" // ExperimentName) // "_") // ExperimentNumber
     OPEN(UNIT = 100033,FILE = FileName)
     !
     ! Reading strategies and states at convergence from file
     !
-    CALL ReadInfoModel()
+    CALL ReadInfoExperiment()
     !
     ! Writing header line in global output file
     !
@@ -86,7 +86,7 @@ CONTAINS
         (i, i = 1, numShockPeriodsPrint), &
         (i, i = 1, numShockPeriodsPrint), &
         (i, i = 1, numAgents), (i, i = 1, numAgents)
-11      FORMAT('    Game DevTo_Price ', &
+11      FORMAT('    Session DevTo_Price ', &
         <numAgents>('  NashProfitIn', I1, ' '), <numAgents>('  CoopProfitIn', I1, ' '), &
         <numAgents>(' NashProfitOut', I1, ' '), <numAgents>(' CoopProfitOut', I1, ' '), &
         ' PreShockCycleLength ', &
@@ -160,7 +160,7 @@ CONTAINS
         I2, A, &
         A, I1, A, I1, A)
     !
-    ! Beginning loop over games
+    ! Beginning loop over sessions
     !
     !$ CALL OMP_SET_NUM_THREADS(numCores)
     !$omp parallel do &
@@ -169,25 +169,25 @@ CONTAINS
     !$omp   iAgent,ProfitGains,SlackOnPath,SlackOffPath, &
     !$omp   freqBRAll,freqBROnPath,freqBROffPath,freqEQAll,freqEQOnPath,freqEQOffPath, &
     !$omp   flagBRAll,flagBROnPath,flagBROffPath,flagEQAll,flagEQOnPath,flagEQOffPath, &
-    !$omp   QGapTotGame,QGapOnPathGame,QGapNotOnPathGame,QGapNotBRAllStatesGame, &
-    !$omp   QGapNotBRonPathGame,QGapNotEqAllStatesGame,QGapNotEqonPathGame,iPrice,iStatePre, &
+    !$omp   QGapTotSession,QGapOnPathSession,QGapNotOnPathSession,QGapNotBRAllStatesSession, &
+    !$omp   QGapNotBRonPathSession,QGapNotEqAllStatesSession,QGapNotEqonPathSession,iPrice,iStatePre, &
     !$omp   ShockPrices,ShockRealPrices,ShockProfits,StaticBRPrices,DynamicBRPrices, &
     !$omp   OptStratQ,DynamicBRQ,DeviationQ,AvgPostPrices, &
     !$omp   AvgPostProfits,VisitedStates,pPrime,jAgent,VisitedStatesTMP,PreCycleLength,QCellCycleLength,&
     !$omp   ShockStates,ShockLength,SameCyclePrePost,PostLength,p,iPeriodState, &
     !$omp   PIStaticBR) 
-    DO iGame = 1, numGames        ! Start of loop over games
+    DO iSession = 1, numSessions        ! Start of loop over sessions
         !
-        PRINT*, 'Game = ', iGame, ' started'
+        PRINT*, 'Session = ', iSession, ' started'
         !
-        OptimalStrategyVec = indexStrategies(:,iGame)
+        OptimalStrategyVec = indexStrategies(:,iSession)
         OptimalStrategy = RESHAPE(OptimalStrategyVec, (/ numStates,numAgents /) )
         !
         ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         ! Pre-shock period analysis
         ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         !
-        PeriodsLengthPre = CycleLength(iGame)
+        PeriodsLengthPre = CycleLength(iSession)
         VisitedStatesPre = 0
         PrePrices = 0.d0
         PreProfits = 0.d0
@@ -198,12 +198,12 @@ CONTAINS
         !
         DO iPeriod = 1, PeriodsLengthPre
             !
-            VisitedStatesPre(iPeriod) = CycleStates(iPeriod,iGame)
+            VisitedStatesPre(iPeriod) = CycleStates(iPeriod,iSession)
             DO iAgent = 1, numAgents
                 !
-                IndPrePrices(iPeriod,iAgent) = CyclePrices(iAgent,iPeriod,iGame)
+                IndPrePrices(iPeriod,iAgent) = CyclePrices(iAgent,iPeriod,iSession)
                 PrePrices(iPeriod,iAgent) = PricesGrids(IndPrePrices(iPeriod,iAgent),iAgent)
-                PreProfits(iPeriod,iAgent) = CycleProfits(iAgent,iPeriod,iGame)
+                PreProfits(iPeriod,iAgent) = CycleProfits(iAgent,iPeriod,iSession)
                 IF (p(numAgents) .LT. numPrices) THEN
                     !
                     PreProfitGains(iPeriod,iAgent) = &
@@ -235,15 +235,15 @@ CONTAINS
         ! Compute indicators that depend on the strategy only:
         ! ProfitGain, Statistics on BR and EQ
         !
-        CALL computeEqCheckGame(OptimalStrategy,PeriodsLengthPre,VisitedStatesPre(:PeriodsLengthPre),SlackOnPath,SlackOffPath, &
+        CALL computeEqCheckSession(OptimalStrategy,PeriodsLengthPre,VisitedStatesPre(:PeriodsLengthPre),SlackOnPath,SlackOffPath, &
             freqBRAll,freqBROnPath,freqBROffPath,freqEQAll,freqEQOnPath,freqEQOffPath, &
             flagBRAll,flagBROnPath,flagBROffPath,flagEQAll,flagEQOnPath,flagEQOffPath)
         !
         ! Compute Q gap for the optimal strategy for all agents, in all states and actions
         !
-        CALL computeQGapToMaxGame(OptimalStrategy,PeriodsLengthPre,CycleStates(:PeriodsLengthPre,iGame), &
-            QGapTotGame,QGapOnPathGame,QGapNotOnPathGame,QGapNotBRAllStatesGame, &
-            QGapNotBRonPathGame,QGapNotEqAllStatesGame,QGapNotEqonPathGame)
+        CALL computeQGapToMaxSession(OptimalStrategy,PeriodsLengthPre,CycleStates(:PeriodsLengthPre,iSession), &
+            QGapTotSession,QGapOnPathSession,QGapNotOnPathSession,QGapNotBRAllStatesSession, &
+            QGapNotBRonPathSession,QGapNotEqAllStatesSession,QGapNotEqonPathSession)
         !
         ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         ! IR analysis with deviation to iPrice
@@ -323,20 +323,20 @@ CONTAINS
                     DO jAgent = 1, numAgents    ! Start of loop over observed agent
                         !
                         !$omp critical
-                        WRITE(100033,fmt) iGame, iPrice, &
+                        WRITE(100033,fmt) iSession, iPrice, &
                             NashProfitsIn, CoopProfitsIn, NashProfitsOut, CoopProfitsOut, &
                             PeriodsLengthPre, &
                             AvgPrePrices, AvgPreProfits, ProfitGains, &
-                            converged(iGame), timeToConvergence(iGame), iStatePre, &
+                            converged(iSession), timeToConvergence(iSession), iStatePre, &
                             flagEQAll,flagEQOnPath,flagEQOffPath, &
                             freqEQAll,freqEQOnPath,freqEQOffPath, &
                             flagBRAll,flagBROnPath,flagBROffPath, &
                             freqBRAll,freqBROnPath,freqBROffPath, &
-                            QGapTotGame(0),QGapOnPathGame(0),QGapNotOnPathGame(0),QGapNotBRAllStatesGame(0), &
-                                QGapNotBRonPathGame(0),QGapNotEqAllStatesGame(0),QGapNotEqonPathGame(0), &
-                            QGapTotGame(1:numAgents),QGapOnPathGame(1:numAgents),QGapNotOnPathGame(1:numAgents), &
-                                QGapNotBRAllStatesGame(1:numAgents), QGapNotBRonPathGame(1:numAgents), &
-                                QGapNotEqAllStatesGame(1:numAgents),QGapNotEqonPathGame(1:numAgents), &
+                            QGapTotSession(0),QGapOnPathSession(0),QGapNotOnPathSession(0),QGapNotBRAllStatesSession(0), &
+                                QGapNotBRonPathSession(0),QGapNotEqAllStatesSession(0),QGapNotEqonPathSession(0), &
+                            QGapTotSession(1:numAgents),QGapOnPathSession(1:numAgents),QGapNotOnPathSession(1:numAgents), &
+                                QGapNotBRAllStatesSession(1:numAgents), QGapNotBRonPathSession(1:numAgents), &
+                                QGapNotEqAllStatesSession(1:numAgents),QGapNotEqonPathSession(1:numAgents), &
                             IndPrePrices(iStatePre,:), PreProfits(iStatePre,:), &
                             iAgent, jAgent, DeviationQ(jAgent), ShockLength, SameCyclePrePost, StaticBRPrices(1,iAgent), &
                             ShockPrices(:,jAgent), &
@@ -356,9 +356,9 @@ CONTAINS
             !
         END DO                              ! End of loop over deviation prices
         !
-        PRINT*, 'Game = ', iGame, ' completed'
+        PRINT*, 'Session = ', iSession, ' completed'
         !
-    END DO                                  ! End of loop over games
+    END DO                                  ! End of loop over sessions
     !$omp end parallel do
     !
     ! Close output file

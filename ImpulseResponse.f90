@@ -11,13 +11,13 @@ CONTAINS
 !
 ! &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 !
-    SUBROUTINE computeIRAnalysis ( iModel, UnitNumber, IRType )
+    SUBROUTINE computeIRAnalysis ( iExperiment, UnitNumber, IRType )
     !
     ! Computes and prints to file the Impulse Response summary statistics for a price deviation
     !
     ! INPUT:
     !
-    ! - iModel             : model index
+    ! - iExperiment             : model index
     ! - UnitNumber         : output unit number
     ! - IRType             : index to select the deviation type:
     !                        IRType <=  -1      : one-period deviation to the IRType-th price
@@ -29,7 +29,7 @@ CONTAINS
     !
     ! Declaring dummy variables
     !
-    INTEGER, INTENT(IN) :: iModel, UnitNumber, IRType
+    INTEGER, INTENT(IN) :: iExperiment, UnitNumber, IRType
     !
     ! Declaring local variable
     !
@@ -37,7 +37,7 @@ CONTAINS
     INTEGER, PARAMETER :: numThresPeriodsLength0 = numThresPeriodsLength+1
     INTEGER, PARAMETER :: numShockPeriodsPrint = 25
     !
-    INTEGER :: i, j, iGame, iAgent, jAgent, iPeriod, iStatePre, iState, &
+    INTEGER :: i, j, iSession, iAgent, jAgent, iPeriod, iStatePre, iState, &
         PosThres, PeriodsLengthPre, DevPrice, DevLength
     INTEGER, DIMENSION(numPeriods) :: VisitedStatesPre
     INTEGER, DIMENSION(numThresPeriodsLength) :: FreqPreLength
@@ -73,7 +73,7 @@ CONTAINS
     !
     ! Reading strategies and states at convergence from file
     !
-    CALL ReadInfoModel()
+    CALL ReadInfoExperiment()
     !
     ! Initializing variables
     !
@@ -101,7 +101,7 @@ CONTAINS
     AvgPostProfits = 0.d0
     AvgPostProfitsQ = 0.d0
     !
-    ! Beginning loop over games
+    ! Beginning loop over sessions
     !
     !$omp parallel do &
     !$omp private(OptimalStrategyVec,OptimalStrategy,PeriodsLengthPre,PosThres, &
@@ -113,12 +113,12 @@ CONTAINS
     !$omp reduction(+ : FreqPreLength,FreqShockLength,FreqPunishmentStrategy,FreqPostLength, &
     !$omp   AvgPrePrices,AvgPreProfits,AvgShockPrices,AvgShockProfits,AvgPostPrices,AvgPostProfits, &
     !$omp   AvgPrePricesQ,AvgPreProfitsQ,AvgShockPricesQ,AvgShockProfitsQ,AvgPostPricesQ,AvgPostProfitsQ)
-    DO iGame = 1, numGames        ! Start of loop aver games
+    DO iSession = 1, numSessions        ! Start of loop aver sessions
         !
-        PRINT*, 'iGame = ', iGame
+        PRINT*, 'iSession = ', iSession
         !
         !$omp critical
-        OptimalStrategyVec = indexStrategies(:,iGame)
+        OptimalStrategyVec = indexStrategies(:,iSession)
         !$omp end critical
         !
         OptimalStrategy = RESHAPE(OptimalStrategyVec, (/ numStates,numAgents /) )
@@ -127,7 +127,7 @@ CONTAINS
         ! Pre-shock period analysis
         ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         !
-        PeriodsLengthPre = CycleLength(iGame)
+        PeriodsLengthPre = CycleLength(iSession)
         PosThres = MIN(numThresPeriodsLength,PeriodsLengthPre)
         FreqPreLength(PosThres) = FreqPreLength(PosThres)+1
         VisitedStatesPre = 0
@@ -135,11 +135,11 @@ CONTAINS
         PreProfits = 0.d0
         DO iPeriod = 1, PeriodsLengthPre
             !
-            VisitedStatesPre(iPeriod) = CycleStates(iPeriod,iGame)
+            VisitedStatesPre(iPeriod) = CycleStates(iPeriod,iSession)
             DO iAgent = 1, numAgents
                 !
-                PrePrices(iPeriod,iAgent) = PricesGrids(CyclePrices(iAgent,iPeriod,iGame),iAgent)
-                PreProfits(iPeriod,iAgent) = CycleProfits(iAgent,iPeriod,iGame)
+                PrePrices(iPeriod,iAgent) = PricesGrids(CyclePrices(iAgent,iPeriod,iSession),iAgent)
+                PreProfits(iPeriod,iAgent) = CycleProfits(iAgent,iPeriod,iSession)
                 !
             END DO
             !
@@ -226,7 +226,7 @@ CONTAINS
             !
         END DO                          ! End of loop aver shocking agent 
         !
-    END DO        ! End of loop over games
+    END DO        ! End of loop over sessions
     !$omp end parallel do
     !
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -235,18 +235,18 @@ CONTAINS
     !
     ! Averages of prices and profits
     !
-    AvgPrePrices = AvgPrePrices/DBLE(numGames)
-    AvgPreProfits = AvgPreProfits/DBLE(numGames)
-    AvgShockPrices = AvgShockPrices/DBLE(numGames)
-    AvgShockProfits = AvgShockProfits/DBLE(numGames)
-    AvgPostPrices = AvgPostPrices/DBLE(numGames)
-    AvgPostProfits = AvgPostProfits/DBLE(numGames)
-    AvgPrePricesQ = AvgPrePricesQ/DBLE(numGames)
-    AvgPreProfitsQ = AvgPreProfitsQ/DBLE(numGames)
-    AvgShockPricesQ = AvgShockPricesQ/DBLE(numGames)
-    AvgShockProfitsQ = AvgShockProfitsQ/DBLE(numGames)
-    AvgPostPricesQ = AvgPostPricesQ/DBLE(numGames)
-    AvgPostProfitsQ = AvgPostProfitsQ/DBLE(numGames)
+    AvgPrePrices = AvgPrePrices/DBLE(numSessions)
+    AvgPreProfits = AvgPreProfits/DBLE(numSessions)
+    AvgShockPrices = AvgShockPrices/DBLE(numSessions)
+    AvgShockProfits = AvgShockProfits/DBLE(numSessions)
+    AvgPostPrices = AvgPostPrices/DBLE(numSessions)
+    AvgPostProfits = AvgPostProfits/DBLE(numSessions)
+    AvgPrePricesQ = AvgPrePricesQ/DBLE(numSessions)
+    AvgPreProfitsQ = AvgPreProfitsQ/DBLE(numSessions)
+    AvgShockPricesQ = AvgShockPricesQ/DBLE(numSessions)
+    AvgShockProfitsQ = AvgShockProfitsQ/DBLE(numSessions)
+    AvgPostPricesQ = AvgPostPricesQ/DBLE(numSessions)
+    AvgPostProfitsQ = AvgPostProfitsQ/DBLE(numSessions)
     !
     ! Computing aggregate (deviating and non-deviating) averages of prices and profits
     !
@@ -329,7 +329,7 @@ CONTAINS
     ! Printing averages and descriptive statistics
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     !
-    IF (iModel .EQ. 1) THEN
+    IF (iExperiment .EQ. 1) THEN
         !
         WRITE(UnitNumber,1) &
             (i, i = 1, numAgents), &
@@ -359,7 +359,7 @@ CONTAINS
                 jAgent = 1, numAgents), iAgent = 1, numAgents), &  ! AvgProfits
             ((jAgent, (jAgent, iAgent, iPeriod, iPeriod = 1, numShockPeriodsPrint), jAgent, iAgent, &
                 jAgent = 1, numAgents), iAgent = 1, numAgents)     ! seProfits        
-1       FORMAT('Model IRType ', &
+1       FORMAT('Experiment IRType ', &
             <numAgents>('    alpha', I1, ' '), &
             <numExplorationParameters>('     beta', I1, ' '), <numAgents>('    delta', I1, ' '), &
             <numAgents>('typeQini', I1, ' ', <numAgents>('par', I1, 'Qini', I1, ' ')), &
@@ -399,7 +399,7 @@ CONTAINS
         !
     END IF
     !
-    WRITE(UnitNumber,2) codModel, IRType, &
+    WRITE(UnitNumber,2) codExperiment, IRType, &
         alpha, MExpl, delta, &
         (typeQInitialization(i), parQInitialization(i, :), i = 1, numAgents), &
         DemandParameters, &
